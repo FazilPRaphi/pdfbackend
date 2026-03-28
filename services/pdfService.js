@@ -131,21 +131,32 @@ export const processPdfJob = async (type, data) => {
         const imageBytes = fs.readFileSync(filePath);
 
         let image;
-        if (filePath.endsWith(".png")) {
+        const lowerPath = filePath.toLowerCase();
+        if (lowerPath.endsWith(".png")) {
           image = await pdfDoc.embedPng(imageBytes);
-        } else {
+        } else if (lowerPath.endsWith(".jpg") || lowerPath.endsWith(".jpeg")) {
           image = await pdfDoc.embedJpg(imageBytes);
+        } else {
+          // Attempt to guess or default to JPG
+          try {
+            image = await pdfDoc.embedJpg(imageBytes);
+          } catch (e) {
+            image = await pdfDoc.embedPng(imageBytes);
+          }
         }
 
-        const { width, height } = image.scale(1);
+        const { width: imgWidth, height: imgHeight } = image.scale(1);
 
-        const page = pdfDoc.addPage([width, height]);
+        // Standard A4 size is roughly 595.28 x 841.89 points
+        // We'll create a page that fits the image, but with a reasonable max/min if needed
+        // For now, let's just use the image size but ensure it's not zero
+        const page = pdfDoc.addPage([imgWidth, imgHeight]);
 
         page.drawImage(image, {
           x: 0,
           y: 0,
-          width,
-          height,
+          width: imgWidth,
+          height: imgHeight,
         });
       }
 
