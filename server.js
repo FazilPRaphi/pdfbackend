@@ -24,7 +24,8 @@ if (!fs.existsSync(outputsDir)) {
 // Middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://your-vercel-app.vercel.app"],
+    origin: ["http://localhost:5173", "https://atstrack-pdfs.vercel.app"],
+    methods: ["GET", "POST"],
     credentials: true,
   }),
 );
