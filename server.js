@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
 import { processPdfJob } from "./services/pdfService.js";
 import { upload } from "./middleware/uploadMiddleware.js";
@@ -14,6 +15,11 @@ const app = express();
 // __dirname fix
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const outputsDir = path.join(__dirname, "outputs");
+if (!fs.existsSync(outputsDir)) {
+  fs.mkdirSync(outputsDir, { recursive: true });
+}
 
 // Middleware
 app.use(cors());
