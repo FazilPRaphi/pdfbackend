@@ -41,7 +41,6 @@ app.post("/api/merge", upload.array("files", 5), async (req, res) => {
   try {
     const jobId = Date.now().toString();
 
-    // 🔥 SAFETY CHECK
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: "No files uploaded" });
     }
@@ -53,7 +52,6 @@ app.post("/api/merge", upload.array("files", 5), async (req, res) => {
     processPdfJob("merge", { files: filePaths })
       .then((result) => {
         console.log("RESULT FROM SERVICE:", result);
-
         jobs[jobId] = {
           status: "completed",
           result: {
@@ -64,7 +62,6 @@ app.post("/api/merge", upload.array("files", 5), async (req, res) => {
       })
       .catch((err) => {
         console.error("MERGE ERROR:", err);
-
         jobs[jobId] = {
           status: "failed",
           error: err.message,
@@ -117,6 +114,7 @@ app.post("/api/split", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Split failed" });
   }
 });
+
 app.post("/api/images-to-pdf", upload.array("images", 10), async (req, res) => {
   try {
     const jobId = Date.now().toString();
@@ -272,6 +270,44 @@ app.post("/api/rotate", upload.single("file"), (req, res) => {
 
   res.json({ jobId });
 });
+
+// ── ✅ NEW: COMPRESS PDF ROUTE ───────────────────────────────────────────────
+app.post("/api/compress", upload.single("file"), (req, res) => {
+  const jobId = Date.now().toString();
+
+  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+  // level: "low" | "medium" | "high" — defaults to "medium"
+  const level = ["low", "medium", "high"].includes(req.body.level)
+    ? req.body.level
+    : "medium";
+
+  jobs[jobId] = { status: "processing" };
+
+  processPdfJob("compress", {
+    file: req.file.path,
+    level,
+  })
+    .then((result) => {
+      if (!result?.file) throw new Error("File generation failed");
+      jobs[jobId] = {
+        status: "completed",
+        result: {
+          file: result.file,
+          downloadUrl: `/downloads/${result.file}`,
+          originalSize: result.originalSize, // ✅ passed through for frontend stats
+          compressedSize: result.compressedSize, // ✅ passed through for frontend stats
+        },
+      };
+    })
+    .catch((err) => {
+      console.error("COMPRESS ERROR:", err);
+      jobs[jobId] = { status: "failed", error: err.message };
+    });
+
+  res.json({ jobId });
+});
+// ── END COMPRESS ROUTE ────────────────────────────────────────────────────────
 
 /**
  * 📊 Job Status API
